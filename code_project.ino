@@ -1,676 +1,336 @@
-// Importando bibliotecas
-#include "DHT.h"
-#include <LiquidCrystal_I2C.h>
-#include <EEPROM.h>
-#include <RTClib.h>
-#include <Wire.h>
+#include <LiquidCrystal_I2C.h>  // Biblioteca para LCD com interface I2C
+#include <RTClib.h>            // Biblioteca para o Relógio em Tempo Real
+#include <Wire.h>              // Biblioteca para comunicação I2C
+#include <EEPROM.h>            // Biblioteca para armazenamento na EEPROM
+#include "DHT.h"               // Biblioteca para o sensor DHT
 
-// Definindo os pinos e variáveis para os sensores
-#define DHTPIN 2 // Configura o pino de entrada do sensor DHT
-#define DHTTYPE DHT11 // Configura o tipo/versão do sensor DHT
-#define LOG_OPTION 1 // Exibe o tipo de LOG que será exibido
-#define SERIAL_OPTION 0 // Reserva a porta serial de número 0 para capotura das informações de data e hora
-#define UTC_OFFSET -3 // Registra o modelo de correção de fuso-horário
+#define LOG_OPTION 1           // Opção para ativar a leitura do log
+#define SERIAL_OPTION 0        // Opção de comunicação serial: 0 para desligado, 1 para ligado
+#define UTC_OFFSET -3          // Ajuste de fuso horário para UTC-3
 
-// Criando instâncias dos objetos e sensores
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-DHT dht(DHTPIN, DHTTYPE);
+// Configurações do sensor DHT22
+#define DHTPIN 2               // Pino onde o sensor DHT22 está conectado
+#define DHTTYPE DHT22          // Tipo do sensor DHT
+DHT dht(DHTPIN, DHTTYPE);     // Criação do objeto para o sensor DHT
 
-// Configurando o EEPROM
-const int maxRecords = 100; // Configura o tamanho total de registros
-const int recordSize = 8; // Configura o tamanho de cada registro em bytes
-int startAddress = 0; // Configura o endereço de 
-int endAddress = maxRecords * recordSize;
-int currentAddress = 0;
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Endereço I2C para o LCD (0x3F ou 0x27), com 16 colunas e 2 linhas
+RTC_DS1307 RTC;                   // Objeto para o relógio em tempo real
 
-int lastLoggedMinute = -1;
+// Configurações da EEPROM
+const int maxRecords = 100;       // Máximo de registros na EEPROM
+const int recordSize = 8;         // Tamanho de cada registro em bytes (4 bytes para timestamp e 4 bytes para dados)
+int startAddress = 0;             // Endereço inicial para a gravação na EEPROM
+int endAddress = maxRecords * recordSize; // Endereço final para a gravação na EEPROM
+int currentAddress = 0;           // Endereço atual para gravação
 
-// Definindo os pinos de entrada e saída
-int ledVermelho = 13; //Define o pino do LED de cor vermelha para o pino 13
-int ledAzul = 12; // Define o pino do LED de cor azul para o pino 12
-int ledVerde = 11; // Define o pino do LED de cor verde para o pino 11
-int buzzer = 7; // Define o pino do buzzer para o pino 7
+const int ledVerde = 11;          // Pino do LED verde
+const int ledAmarelo = 12;        // Pino do LED amarelo
+const int ledVermelho = 13;       // Pino do LED vermelho
+const int buzzer = 7;             // Pino do buzzer
+const int LDR_PIN = A0;           // Pino do sensor LDR (resistor dependente de luz)
 
-// Variáveis para controle de exibição
-unsigned long tempoAtual = 0; // Cria variavel inicial de tempoAtual para um valor de 0 (zero). Essa variavel é responsável por calcular o tempo atual de execução do software dentro do sistema Arduino
-unsigned long tempoAnterior = 0; // Cria variavel inicial de tempoAnterior para um valor de 0 (zero). Essa variavel irá armazenar o status da variavel de tempoAtual quando a troca de informações na tela LCD do Arduino for realizada
-const unsigned long intervalo = 11000; // Intervalo de 10 segundos
-enum Exibicao { LUMINOSIDADE, TEMPERATURA, UMIDADE }; // Enum para controle de exibição
-Exibicao modoExibicao = LUMINOSIDADE; // Cria uma variavel de modoExibicao a partir dos valores enumerados na variavel 'Exibicao' criada anteriormente. Essa variavel recebe em momento inicial o valor de 'LUMINOSIDADE' para exibir os dados de luminosidade em um primeiro momento de execução do software
+int lastLoggedMinute = -1;        // Último minuto registrado para controle do log
 
-// Configurando os bytes para construção do foguete em tela LCD
-// Montando o primeiro range de bytes de exibição
-byte foguete[8] = {
+// Triggers para temperatura, umidade e luminosidade
+float trigger_t_min = 15.0;       // Valor mínimo de temperatura para acionar o LED verde e buzzer
+float trigger_t_max = 25.0;       // Valor máximo de temperatura para acionar o LED vermelho e buzzer
+float trigger_u_min = 30.0;       // Valor mínimo de umidade para acionar o LED verde e buzzer
+float trigger_u_max = 50.0;       // Valor máximo de umidade para acionar o LED vermelho e buzzer
+float trigger_l_max = 30.0;       // Valor máximo de luminosidade para acionar o LED vermelho e buzzer
+float trigger_l_min = 00.0;       // Valor mínimo de luminosidade para acionar o LED verde e buzzer
 
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00001,
-  B00111,
-  B11001
-
-};
-
-// Montando o segundo range de bytes de exibição
-byte foguete2[8] = {
-
-  B01100,
-  B01010,
-  B01001,
-  B01000,
-  B01111,
-  B11000,
-  B01000,
-  B01000
-
-};
-
-// Montando o terceiro range de bytes de exibição
-byte foguete3[8] = {
-
-  B00000,
-  B00000,
-  B00000,
-  B10000,
-  B11111,
-  B00000,
-  B00110,
-  B01001
-
-};
-
-
-// Montando o quarto range de bytes de exibição
-byte foguete4[8] = {
-
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B11100,
-  B00110,
-  B00011,
-  B00001
-
-};
-
-
-// Montando o quinto range de bytes de exibição
-byte foguete5[8] = {
-
-  B00111,
-  B00001,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000
-
-};
-
-
-// Montando o sexto range de bytes de exibição
-byte foguete6[8] = {
-
-  B01000,
-  B11000,
-  B01111,
-  B01000,
-  B01001,
-  B01010,
-  B01100,
-  B00000
-
-};
-
-
-// Montando o setimo range de bytes de exibição
-byte foguete7[8] = {
-
-  B00110,
-  B00000,
-  B11111,
-  B10000,
-  B00000,
-  B00000,
-  B00000,
-  B00000
-
-};
-
-
-// Montando o oitavo range de bytes de exibição
-byte foguete8[8] = {
-
-  B00011,
-  B00110,
-  B11100,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000
-
-};
-
-// Executa a varredura e configuração inicial dos componentes e suas saidas ou entradas
 void setup() {
-
-  // Iniciliza, configura e reconhece o display LCD
-  pinMode(LED_BUILTIN, OUTPUT);
-  lcd.init();
-  lcd.backlight();
-  Serial.begin(9600);
-
-  // Configura os caracteres iniciais para exibição do foguete em um modelo inicial
-  lcd.createChar(0, foguete); 
-  lcd.createChar(1, foguete2);
-  lcd.createChar(2, foguete3);
-  lcd.createChar(3, foguete4);
-  lcd.createChar(4, foguete5);
-  lcd.createChar(5, foguete6);
-  lcd.createChar(6, foguete7);
-  lcd.createChar(7, foguete8);
-
-  // Configura as entradas e saidas dos dispositivos
-  pinMode(buzzer, OUTPUT); //Configura o buzzer como um dispositivo de saída
-  pinMode(ledVermelho, OUTPUT); //Configura o ledVermelho como um dispositivo de saída
-  pinMode(ledAzul, OUTPUT); //Configura o ledAzul como um dispositivo de saída
-  pinMode(ledVerde, OUTPUT); //Configura o ledVerde como um dispositivo de saída
-
-  //Inicializa o sensor dht
-  dht.begin();
-
-  //Configura e inicializa o sensor RTC
-  RTC.begin(); // Inicialização do Relógio em Tempo Real
-  RTC.adjust(DateTime(F(__DATE__), F(__TIME__))); // Configura o modelo de exibição da data e da hora
-  RTC.adjust(DateTime(2024, 5, 6, 08, 15, 00)); // Ajusta os modelos de exibição de data e hora
-
-  // Inicilizando a memória EEPROM
-  EEPROM.begin()
-
-  //Realiza um delay de dois segundos no processamento do modelo para não sobrecarregamento do sistema
-  delay(2000);
-
+    pinMode(ledVerde, OUTPUT);    // Configura pinos dos LEDs e buzzer como saída
+    pinMode(ledAmarelo, OUTPUT);
+    pinMode(ledVermelho, OUTPUT);
+    pinMode(buzzer, OUTPUT);
+    pinMode(LDR_PIN, INPUT);      // Configura o pino do LDR como entrada
+    dht.begin();                 // Inicializa o sensor DHT
+    Serial.begin(9600);          // Inicializa a comunicação serial
+    lcd.init();                  // Inicializa o LCD
+    lcd.backlight();             // Liga o backlight do LCD
+    RTC.begin();                 // Inicializa o relógio em tempo real
+    RTC.adjust(DateTime(F(__DATE__), F(__TIME__))); // Ajusta o relógio para a data e hora de compilação
+    // RTC.adjust(DateTime(2024, 5, 6, 08, 15, 00));  // Ajuste inicial de data e hora
+    EEPROM.begin();              // Inicializa a EEPROM
 }
 
-// Inica o loop principal do modelo
 void loop() {
+    DateTime now = RTC.now();   // Obtém a data e hora atual do relógio
 
-  // Calcula o tempo atual do loop
-  tempoAtual = millis(); // Atualiza o tempo atual
+    // Calculando o deslocamento do fuso horário
+    int offsetSeconds = UTC_OFFSET * 3600; // Converte horas para segundos
+    now = now.unixtime() + offsetSeconds; // Adiciona o deslocamento ao tempo atual
 
-  // Caso a subtração resultante entre o tempo atual e o tempo anterior calculado seja maior ou igual ao tempo de intervalo pré-definido anteriormente, alterna entre luminosidade, temperatura e umidade
-  if (tempoAtual - tempoAnterior >= intervalo) {
-    
-    // Cria a primeira condição -> Caso o 'modoExibicao' no momento da verificação seja equivalente a LUMINOSIDADE, o mesmo é trocado para TEMPERATURA
-    if (modoExibicao == LUMINOSIDADE) {
+    // Convertendo o tempo ajustado para DateTime
+    DateTime adjustedTime = DateTime(now);
 
-      modoExibicao = TEMPERATURA;
+    if (LOG_OPTION) get_log(); // Se LOG_OPTION estiver ativado, lê o log da EEPROM
 
+    float umidade = dht.readHumidity();      // Lê a umidade do sensor DHT
+    float temperatura = dht.readTemperature(); // Lê a temperatura do sensor DHT
+
+    int valor_luminosidade = analogRead(LDR_PIN); // Lê o valor do sensor LDR
+    int luminosidade = map(valor_luminosidade, 0, 1023, 0, 100); // Mapeia o valor lido para uma escala de 0 a 100
+
+    // Verifica se os valores lidos excedem os limites superiores
+    if(umidade > trigger_u_max || temperatura > trigger_t_max || luminosidade > trigger_l_max) {
+      int tempInt = (int)(temperatura * 100); // Converte a temperatura para inteiro
+      int umidInt = (int)(umidade * 100);     // Converte a umidade para inteiro
+      int lumiInt = (int)(luminosidade * 100); // Converte a luminosidade para inteiro
+
+      digitalWrite(ledVermelho, HIGH); // Acende o LED vermelho
+
+      // Aciona o buzzer
+      tone(buzzer, 1000); // Toca o buzzer com frequência de 1000 Hz
+      delay(500); // Tempo ligado do buzzer
+      noTone(buzzer); // Para o buzzer
+      delay(500); // Tempo de pausa
+      tone(buzzer, 1000);
+      delay(500);
+      noTone(buzzer);
+      delay(500);
+      tone(buzzer, 1000);
+      delay(500);
+      noTone(buzzer);
+
+      // Verifica a umidade e exibe mensagem correspondente no LCD
+      if (umidade > trigger_l_max) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("UMID: ");
+        lcd.print(umidade);
+        lcd.setCursor(0, 1);
+        lcd.print("ABAFADO");
+        delay(2500);
+      }
+
+      // Verifica a temperatura e exibe mensagem correspondente no LCD
+      if (temperatura > trigger_t_max) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("TEMP: ");
+        lcd.print(temperatura);
+        lcd.setCursor(0, 1);
+        lcd.print("QUENTE");
+        delay(2500);
+      }
+
+      // Verifica a luminosidade e exibe mensagem correspondente no LCD
+      if (luminosidade > trigger_l_max) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("LUMI: ");
+        lcd.print(luminosidade);
+        lcd.setCursor(0, 1);
+        lcd.print("CLARO");
+        delay(2500);
+      }
+
+      // Armazena os dados na EEPROM
+      EEPROM.put(currentAddress, now.unixtime());  // Armazena o timestamp
+      EEPROM.put(currentAddress + 4, tempInt);    // Armazena a temperatura
+      EEPROM.put(currentAddress + 6, umidInt);    // Armazena a umidade
+      EEPROM.put(currentAddress + 8, lumiInt);    // Armazena a luminosidade
+
+      getNextAddress(); // Atualiza o endereço para o próximo registro
+
+      ExibeDataHora(); // Exibe a data e hora no LCD
+      delay(2500);
+
+      digitalWrite(ledVermelho, LOW); // Apaga o LED vermelho
     }
+    // Verifica se os valores lidos estão abaixo dos limites inferiores
+    else if (umidade < trigger_u_min || temperatura < trigger_t_min || luminosidade < trigger_l_min) {
+      int tempInt = (int)(temperatura * 100); // Converte a temperatura para inteiro
+      int umidInt = (int)(umidade * 100);     // Converte a umidade para inteiro
+      int lumiInt = (int)(luminosidade * 100); // Converte a luminosidade para inteiro
 
-    // Cria a primeira condição -> Caso o 'modoExibicao' no momento da verificação seja equivalente a TEMPERATURA, o mesmo é trocado para HUMIDADE
-    else if (modoExibicao == TEMPERATURA) {
+      digitalWrite(ledVerde, HIGH); // Acende o LED verde
 
-      modoExibicao = UMIDADE;
+      // Aciona o buzzer
+      tone(buzzer, 1000); // Toca o buzzer com frequência de 1000 Hz
+      delay(1000); // Tempo ligado do buzzer
+      noTone(buzzer); // Para o buzzer
+      delay(500); // Tempo de pausa
+      tone(buzzer, 1000);
+      delay(1000);
+      noTone(buzzer);
+      delay(500);
+      tone(buzzer, 1000);
+      delay(1000);
+      noTone(buzzer);
 
-    } 
+      // Verifica a umidade e exibe mensagem correspondente no LCD
+      if (umidade < trigger_u_min) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("UMID: ");
+        lcd.print(umidade);
+        lcd.setCursor(0, 1);
+        lcd.print("SECO");
+        delay(2500);
+      }
 
-    // Cria a primeira condição -> Caso o 'modoExibicao' no momento da verificação seja equivalente a HUMIDADE, o mesmo é trocado para LUMINOSIDADE
+      // Verifica a temperatura e exibe mensagem correspondente no LCD
+      if (temperatura < trigger_t_min) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("TEMP: ");
+        lcd.print(temperatura);
+        lcd.setCursor(0, 1);
+        lcd.print("FRIO");
+        delay(2500);
+      }
+
+      // Verifica a luminosidade e exibe mensagem correspondente no LCD
+      if (luminosidade < trigger_l_min) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("LUMI: ");
+        lcd.print(luminosidade);
+        lcd.setCursor(0, 1);
+        lcd.print("ESCURO");
+        delay(2500);
+      }
+
+      // Armazena os dados na EEPROM
+      EEPROM.put(currentAddress, now.unixtime());  // Armazena o timestamp
+      EEPROM.put(currentAddress + 4, tempInt);    // Armazena a temperatura
+      EEPROM.put(currentAddress + 6, umidInt);    // Armazena a umidade
+      EEPROM.put(currentAddress + 8, lumiInt);    // Armazena a luminosidade
+
+      getNextAddress(); // Atualiza o endereço para o próximo registro
+
+      ExibeDataHora(); // Exibe a data e hora no LCD
+      delay(2500);
+
+      digitalWrite(ledVerde, LOW); // Apaga o LED verde
+    }
+    // Se os valores lidos estiverem dentro dos limites ideais
     else {
+      digitalWrite(ledAmarelo, HIGH); // Acende o LED amarelo
+      delay(500);
+      digitalWrite(ledAmarelo, LOW); // Apaga o LED amarelo
+      delay(500);
 
-      modoExibicao = LUMINOSIDADE;
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("UMID: ");
+      lcd.print(umidade);
+      lcd.setCursor(0, 1);
+      lcd.print("IDEAL");
+      delay(2500);
 
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("TEMP: ");
+      lcd.print(temperatura);
+      lcd.setCursor(0, 1);
+      lcd.print("IDEAL");
+      delay(2500);
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("LUMI: ");
+      lcd.print(luminosidade);
+      lcd.setCursor(0, 1);
+      lcd.print("IDEAL");
+      delay(2500);
     }
 
-    // Atualiza a variavel de tempo atual para o valor da variavel de tempo anterior
-    tempoAnterior = tempoAtual;
-
-  }
-
-  // Realiza os modelos de exibição
-  // Caso o 'modoExibição' seja equivalende a 'LUMINOSIDADE' executa a animação do foguete e executa a exibição dos dados de luminosidade
-  if (modoExibicao == LUMINOSIDADE) {
-
-    animarFoguete();
-    mostrarLuminosidadeInfo();
-    delay(5000);
-    mostrarDataEHora();
-
-  }
-
-  // Caso o 'modoExibição' seja equivalende a 'TEMPERATURA' executa a animação do foguete e executa a exibição dos dados de temperatura
-  else if (modoExibicao == TEMPERATURA) {
-
-    animarFoguete();
-    mostrarTemperaturaInfo();
-    delay(5000);
-    mostrarDataEHora();
-
-  }
-
-  // Caso o 'modoExibição' seja equivalende a 'HUMIDADE' executa a animação do foguete e executa a exibição dos dados de humidade
-  else if (modoExibicao == UMIDADE) {
-
-    animarFoguete();
-    mostrarUmidadeInfo();
-    delay(5000);
-    mostrarDataEHora();
-
-  }
-
-  // Pequeno atraso para evitar a sobrecarga do processador
-  delay(500); 
-
-}
-
-// Define e configura função que exibe e calcula dados de luminosidade
-void mostrarLuminosidadeInfo() {
-
-  // Lê o valor do sensor de luminosidade
-  int luminosidade = analogRead(A0);
-
-  // Cálculo da tensão e resistência do LDR
-  float Vout = (luminosidade * 0.0048828125); // Conversão para tensão
-  float RLDR = (10000.0 * (5 - Vout)) / Vout; // Cálculo da resistência
-
-  // Realiza a configuração dos dados que serão exibidos no LCD
-  lcd.clear(); // Limpa o LCD
-  lcd.setCursor(0, 0); // Define o cursor de onde o print seguiinte deve ser exibido
-  lcd.print("LUMINOSIDADE:"); // Exibe que o dado a ser exibido é o de 'LUMINOSIDADE' e está atracado na linha zero, coluna 0
-
-  // Define ações para cada variação de valor do sensor LDR
-  // Define ações para caso o valor do LDR seja menor ou igual a 0 (zero)
-  if (RLDR <= 0) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, HIGH); // Ascende o LED azul
-    digitalWrite.(ledVerde, LOW); // Apaga o LED verde
-    digitalWrite.(ledVermelho, LOW); // Apaga o LED Vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("ESCURO " + String(RLDR) + "%"); // Diz que o ambiente está escuro, e exibe o porcentual de luminosidade
-    
-    // Acionar o buzzer
-    tone(buzzer, 1000); // Tocar o buzzer com frequência de 1000 Hz
-    delay(2500); // Tempo do buzzer
-    noTone(buzzer); // Parar o buzzer
-    delay(2500); // Tempo de pausa
-
-    // Converte valores para int para armazenamento
-    int lumiInt = (int)(luminosidade * 100)
-
-    // Escreve os dados na memória EEPROM
-    EEPROM.put(currentAddress, now.unixtime()); // Armazena dados de data e hora no endereço disponível
-    EEPROM.put(currentAddress + 4, lumiInt); // Armazena os dados de luminosidade
-
-    // Atualiza o endereço para o próximo registro
-    getNextAddress();
-  
-  } 
-  
-  // Define ações para caso o valor do LDR seja maior que zero e menor que 30
-  else if ((RLDR > 0) && (RLDR < 30)) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, LOW); // Apaga o LED azul
-    digitalWrite.(ledVerde, HIGH); // Ascende o LED verde
-    digitalWrite.(ledVermelho, LOW); // Apaga o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("IDEAL " + String(RLDR) + "%"); // Diz que o ambiente está ideal, e exibe o porcentual de luminosidade
-
-  } 
-  
-  // Define ações para caso o valor do LDR seja maior que 30
-  else if (RLDR > 30) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, LOW); // Apaga o LED azul
-    digitalWrite.(ledVerde, LOW); // Apaga o LED verde
-    digitalWrite.(ledVermelho, HIGH); // Apaga o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("CLARO " + String(RLDR) + "%"); // Diz que o ambiente está claro, e exibe o porcentual de luminosidade
-    
-    // Acionar o buzzer
-    tone(buzzer, 1000); // Tocar o buzzer com frequência de 1000 Hz
-    delay(500); // Tempo do buzzer
-    noTone(buzzer); // Parar o buzzer
-    delay(500); // Tempo de pausa
-
-    // Converte valores para int para armazenamento
-    int lumiInt = (int)(luminosidade * 100)
-
-    // Escreve os dados na memória EEPROM
-    EEPROM.put(currentAddress, now.unixtime()); // Armazena dados de data e hora no endereço disponível
-    EEPROM.put(currentAddress + 4, lumiInt); // Armazena os dados de luminosidade
-
-    // Atualiza o endereço para o próximo registro
-    getNextAddress();
-  
-
-  }
-
-}
-
-// Define e configura função que exibe e calcula dados de temperatura
-void mostrarTemperaturaInfo() {
-
-  // Define uma variavel para a leitura de temperatura e configura o sensor DHT para ler a Temperatura do ambiente
-  float temperatura = dht.readTemperature();
-
-  // Realiza a configuração dos dados que serão exibidos no LCD
-  lcd.clear(); // Limpa o LCD
-  lcd.setCursor(0, 0); // Define o cursor de onde o print seguiinte deve ser exibido
-  lcd.print("TEMPERATURA:"); // Exibe que o dado a ser exibido é o de 'TEMPERATURA' e está atracado na linha zero, coluna 0
-
-    // Define ações para cada variação de valor do sensor DHT para temperatura
-    // Define ações para caso o valor do DHT em temperatura seja menor ou igual a 15 graus celcius
-  if (temperatura <= 15.0) { 
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, HIGH); // Ascende o LED azul
-    digitalWrite.(ledVerde, LOW); // Apaga o LED verde
-    digitalWrite.(ledVermelho, LOW); // Apaga o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("FRIO " + String(temperatura) + "C"); // Diz que o ambiente está frio, e exibe a temperatura
-
-    // Acionar o buzzer
-    tone(buzzer, 1000); // Tocar o buzzer com frequência de 1000 Hz
-    delay(2500); // Tempo do buzzer
-    noTone(buzzer); // Parar o buzzer
-    delay(2500); // Tempo de pausa
-
-    // Converte valores para int para armazenamento
-    int tempInt = (int)(temperatura * 100)
-
-    // Escreve os dados na memória EEPROM
-    EEPROM.put(currentAddress, now.unixtime()); // Armazena dados de data e hora no endereço disponível
-    EEPROM.put(currentAddress + 6, tempInt); // Armazena os dados de temperatura
-
-    // Atualiza o endereço para o próximo registro
-    getNextAddress();
-  
-  }
-
-  // Define ações para caso o valor do DHT em temperatura seja maior que 15 e menor que 25 graus celcius
-  else if ((temperatura > 15) && (temperatura < 25)) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, LOW); // Apaga o LED azul
-    digitalWrite.(ledVerde, HIGH); // Ascende o LED verde
-    digitalWrite.(ledVermelho, LOW); // Apaga o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("IDEAL " + Sring(temperatura) + "C"); // Diz que o ambiente está ideal, e exibe a temperatura
-
-  } 
-
-  // Define ações para caso o valor do DHT em temperatura seja maior ou igual que 25 graus celcius
-  else if (temperatura >= 25) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, LOW); // Apaga o LED azul
-    digitalWrite.(ledVerde, LOW); // Apaga o LED verde
-    digitalWrite.(ledVermelho, HIGH); // Ascende o LED Vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("QUENTE " + String(temperatura) + "C"); // Diz que o ambiente está quente, e exibe a temperatura
-    
-    // Acionar o buzzer
-    tone(buzzer, 1000); // Tocar o buzzer com frequência de 1000 Hz
-    delay(500); // Tempo do buzzer
-    noTone(buzzer); // Parar o buzzer
-    delay(500); // Tempo de pausa
-
-    // Converte valores para int para armazenamento
-    int tempInt = (int)(temperatura * 100)
-
-    // Escreve os dados na memória EEPROM
-    EEPROM.put(currentAddress, now.unixtime()); // Armazena dados de data e hora no endereço disponível
-    EEPROM.put(currentAddress + 6, tempInt); // Armazena os dados de temperatura
-
-    // Atualiza o endereço para o próximo registro
-    getNextAddress();
-
-  }
-
-}
-
-// Define e configura função que exibe e calcula dados de temperatura
-void mostrarUmidadeInfo() {
-
-  // Define uma variavel para a leitura de humidade e configura o sensor DHT para ler a Humidade do ambiente
-  float umidade = dht.readHumidity();
-
-  // Realiza a configuração dos dados que serão exibidos no LCD
-  lcd.clear(); // Limpa o LCD
-  lcd.setCursor(0, 0); // Define o cursor de onde o print seguiinte deve ser exibido
-  lcd.print("UMIDADE:"); // Exibe que o dado a ser exibido é o de 'HUMIDADE' e está atracado na linha zero, coluna 0
-
-    // Define ações para cada variação de valor do sensor DHT para humidade
-    // Define ações para caso o valor do DHT em humidade seja menor ou igual a 30
-  if (umidade <= 30) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, HIGH); // Ascende o LED azul
-    digitalWrite.(ledVerde, LOW); // Apaga o LED verde
-    digitalWrite.(ledVermelho, LOW); // Apaga o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("SECO " + String(umidade) + "%"); // Diz que o ambiente está seco, e exibe a humidade
-
-    // Acionar o buzzer
-    tone(buzzer, 1000); // Tocar o buzzer com frequência de 1500 Hz
-    delay(2500); // Tempo do buzzer
-    noTone(buzzer); // Parar o buzzer
-    delay(2500); // Tempo de pausa
-
-    // Converte valores para int para armazenamento
-    int umidInt = (int)(umidade * 100)
-
-    // Escreve os dados na memória EEPROM
-    EEPROM.put(currentAddress, now.unixtime()); // Armazena dados de data e hora no endereço disponível
-    EEPROM.put(currentAddress + 8, umidInt); // Armazena os dados de umidade
-
-    // Atualiza o endereço para o próximo registro
-    getNextAddress();
-
-  }
-
-  // Define ações para caso o valor do DHT em humidade seja maior que 30 e menor que 50 graus celcius
-  else if ((umidade > 30) && (umidade < 50)) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, LOW); // Apaga o LED azul
-    digitalWrite.(ledVerde, HIGH); // Ascende o LED verde
-    digitalWrite.(ledVermelho, LOW); // Apaga o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("IDEAL " + String(umidade) + "%"); // Diz que o ambiente está ideal, e exibe a humidade
-
-  }
-
-  // Define ações para caso o valor do DHT em humidade seja maior ou igual que 50
-  else if (umidade >= 50) {
-
-    // Define status dos LED's
-    digitalWrite.(ledAzul, LOW); // Ascende o LED azul
-    digitalWrite.(ledVerde, LOW); // Apaga o LED verde
-    digitalWrite.(ledVermelho, HIGH); // Ascende o LED vermelho
-
-    // Configura a exibição do valor na tela LCD
-    lcd.setCursor(0, 1); // Define o cursor de onde o print seguinte deve ser exibido
-    lcd.print("ABAFADO " + String(umidade) + "%"); // Diz que o ambiente está abafado, e exibe a humidade
-    
-    // Acionar o buzzer
-    tone(buzzer, 1000); // Tocar o buzzer com frequência de 1000 Hz
-    delay(500); // Tempo do buzzer
-    noTone(buzzer); // Parar o buzzer
-    delay(500); // Tempo de pausa
-
-    // Converte valores para int para armazenamento
-    int umidInt = (int)(umidade * 100)
-
-    // Escreve os dados na memória EEPROM
-    EEPROM.put(currentAddress, now.unixtime()); // Armazena dados de data e hora no endereço disponível
-    EEPROM.put(currentAddress + 8, umidInt); // Armazena os dados de umidade
-
-    // Atualiza o endereço para o próximo registro
-    getNextAddress();
-
-  }
-
-}
-
-// Criando função para exibir a animação do foguete
-void animarFoguete() {
-
-  // Definindo um array bidimensional para armazenar os bytes que representam cada frame da animação do foguete.
-  byte foguetes[8][8] = {foguete, foguete2, foguete3, foguete4, foguete5, foguete6, foguete7, foguete8};
-
-  // Loop para percorrer cada frame da animação
-  for (int i = 0; i < 8; i++) {
-
-    // Limpa o display LCD antes de desenhar o novo frame
-    lcd.clear();
-
-    // Define o cursor na posição (0, 0) para a linha superior do LCD
-    lcd.setCursor(0, 0);
-
-    // Loop para escrever cada byte do frame na linha superior
-    for (int j = 0; j < 8; j++) {
-      // Escreve o byte correspondente à coluna 'j' no display LCD
-      lcd.write(byte(j));
+    if (SERIAL_OPTION) {
+        // Exibe a data e hora ajustada no monitor serial
+        Serial.print(adjustedTime.day());
+        Serial.print("/");
+        Serial.print(adjustedTime.month());
+        Serial.print("/");
+        Serial.print(adjustedTime.year());
+        Serial.print(" ");
+        Serial.print(adjustedTime.hour() < 10 ? "0" : ""); // Adiciona zero à esquerda se a hora for menor que 10
+        Serial.print(adjustedTime.hour());
+        Serial.print(":");
+        Serial.print(adjustedTime.minute() < 10 ? "0" : ""); // Adiciona zero à esquerda se o minuto for menor que 10
+        Serial.print(adjustedTime.minute());
+        Serial.print(":");
+        Serial.print(adjustedTime.second() < 10 ? "0" : ""); // Adiciona zero à esquerda se o segundo for menor que 10
+        Serial.print(adjustedTime.second());
+        Serial.print("\n");
     }
 
-    // Define o cursor na posição (0, 1) para a linha inferior do LCD
-    lcd.setCursor(0, 1);
-
-    // Loop para escrever cada byte do frame na linha inferior
-    for (int j = 4; j < 8; j++) {
-      // Escreve o byte correspondente à coluna 'j' no display LCD
-      lcd.write(byte(j));
-    }
-
-    // Pausa de 500 milissegundos antes de atualizar o frame
-    delay(500);
-  }
-  
+    delay(1000); // Atraso de 1 segundo antes da próxima leitura
 }
 
-void mostrarDataEHora() {
-
-  // Captura informações da data e da hora exata da execução da função
-  Datatime now = RTC.now();
+// Função para exibir a data e hora no LCD
+void ExibeDataHora() {
+  DateTime now = RTC.now();
 
   // Calculando o deslocamento do fuso horário
-  int offsetSeconds = UTC_OFFSET * 3600; // Convertendo horas para segundos
-  now = now.unixtime() + offsetSeconds; // Adicionando o deslocamento ao tempo atual
+  int offsetSeconds = UTC_OFFSET * 3600; // Converte horas para segundos
+  now = now.unixtime() + offsetSeconds; // Adiciona o deslocamento ao tempo atual
 
-  // Convertendo o novo tempo para DateTime
   DateTime adjustedTime = DateTime(now);
 
-  // Realiza a impressão de data e hora no display LCD
-  lcd.setCursor(0, 0); // Ancora a primeira linha do LCD
-  lcd.print("DATA: "); // Registra uma exibição de data
-  lcd.print(adjustedTime.day() < 10 ? "0" : ""); // Adiciona zero à esquerda se dia for menor que 10
+  lcd.setCursor(0, 0);
+  lcd.print("DATA: ");
+  lcd.print(adjustedTime.day() < 10 ? "0" : ""); // Adiciona zero à esquerda se o dia for menor que 10
   lcd.print(adjustedTime.day());
   lcd.print("/");
-  lcd.print(adjustedTime.month() < 10 ? "0" : ""); // Adiciona zero à esquerda se mês for menor que 10
+  lcd.print(adjustedTime.month() < 10 ? "0" : ""); // Adiciona zero à esquerda se o mês for menor que 10
   lcd.print(adjustedTime.month());
   lcd.print("/");
   lcd.print(adjustedTime.year());
   lcd.setCursor(0, 1);
   lcd.print("HORA: ");
-  lcd.print(adjustedTime.hour() < 10 ? "0" : ""); // Adiciona zero à esquerda se hora for menor que 10
+  lcd.print(adjustedTime.hour() < 10 ? "0" : ""); // Adiciona zero à esquerda se a hora for menor que 10
   lcd.print(adjustedTime.hour());
   lcd.print(":");
-  lcd.print(adjustedTime.minute() < 10 ? "0" : ""); // Adiciona zero à esquerda se minuto for menor que 10
+  lcd.print(adjustedTime.minute() < 10 ? "0" : ""); // Adiciona zero à esquerda se o minuto for menor que 10
   lcd.print(adjustedTime.minute());
   lcd.print(":");
-  lcd.print(adjustedTime.second() < 10 ? "0" : ""); // Adiciona zero à esquerda se segundo for menor que 10
+  lcd.print(adjustedTime.second() < 10 ? "0" : ""); // Adiciona zero à esquerda se o segundo for menor que 10
   lcd.print(adjustedTime.second());
-
 }
 
+// Função para atualizar o endereço na EEPROM
 void getNextAddress() {
-
-    // Avança o endereço atual para o próximo local de armazenamento na EEPROM
-    currentAddress += recordSize;
-
-    // Verifica se o endereço atual excedeu o limite de armazenamento
+    currentAddress += recordSize;  // Avança o endereço para o próximo registro
     if (currentAddress >= endAddress) {
-
-      // Se o endereço ultrapassou o limite (endAddress), redefine o endereço para o início
-      currentAddress = 0; // Volta para o começo se atingir o limite
-    
+        currentAddress = 0; // Volta ao início se atingir o final
     }
-
 }
 
-
+// Função para exibir o log armazenado na EEPROM no monitor serial
 void get_log() {
+    Serial.println("Data stored in EEPROM:");
+    Serial.println("Timestamp\t\tTemperatura\tUmidade\tLuminosidade");
 
-  // Imprime um cabeçalho indicando que os dados armazenados na EEPROM serão exibidos
-  Serial.println("Dado armazenado na memória EEPROM:");
-  Serial.println("Timestamp\t\tLuminosidade\tTemperatura\tUmidade");
+    for (int address = startAddress; address < endAddress; address += recordSize) {
+        long timeStamp;
+        int tempInt, umidInt, lumiInt;
 
-  // Loop para percorrer todos os registros armazenados na EEPROM
-  for (int address = startAddress; address < endAddress; address += recordSize) {
-    
-    long timeStamp; // Variável para armazenar o timestamp (data e hora)
-    int lumiInt; // Variável para armazenar o valor da luminosidade (em inteiro)
-    int tempInt; // Variável para armazenar o valor da temperatura (em inteiro)
-    int umidInt; // Variável para armazenar o valor da umidade (em inteiro)
+        // Ler dados da EEPROM
+        EEPROM.get(address, timeStamp);
+        EEPROM.get(address + 4, tempInt);
+        EEPROM.get(address + 6, umidInt);
+        EEPROM.get(address + 8, lumiInt);
 
-    // Ler os dados da EEPROM usando a função EEPROM.get()
-    EEPROM.get(address, timeStamp); // Lê o timestamp do endereço atual
-    EEPROM.get(address + 4, lumiInt); // Lê o valor da luminosidade (início do próximo registro)
-    EEPROM.get(address + 6, tempInt); // Lê o valor da temperatura (continuação do registro)
-    EEPROM.get(address + 8, humiInt); // Lê o valor da umidade (final do registro)
+        // Converter valores
+        float temperatura = tempInt / 100.0;
+        float umididade = umidInt / 100.0;
+        float luminosidade = lumiInt / 100.0;
 
-    // Converter valores de inteiros para floats para facilitar a leitura
-    float luminosidade = lumiInt / 100.0;  // Converte o valor de luminosidade para float
-    float temperatura = tempInt / 100.0;   // Converte o valor de temperatura para float
-    float umidade = umidInt / 100.0;       // Converte o valor de umidade para float
-
-    // Verificar se os dados são válidos antes de imprimir
-    if (timeStamp != 0xFFFFFFFF) { // 0xFFFFFFFF é o valor padrão de uma EEPROM não inicializada
-      // Cria um objeto DateTime a partir do timestamp para formatação legível
-      DateTime dt = DateTime(timeStamp);
-      
-      // Imprime o timestamp no formato completo
-      Serial.print(dt.timestamp(DateTime::TIMESTAMP_FULL));
-      Serial.print("\t");
-      
-      // Imprime a luminosidade com unidade de porcentagem
-      Serial.print(luminosidade);
-      Serial.print(" %\t\t");
-      
-      // Imprime a temperatura com unidade de Celsius
-      Serial.print(temperatura);
-      Serial.print(" C\t\t");
-      
-      // Imprime a umidade com unidade de porcentagem
-      Serial.print(umidade);
-      Serial.println(" %");  // Adiciona uma nova linha após o último dado
+        // Verificar se os dados são válidos antes de imprimir
+        if (timeStamp != 0xFFFFFFFF) { // 0xFFFFFFFF é o valor padrão de uma EEPROM não inicializada
+            DateTime dt = DateTime(timeStamp);
+            Serial.print(dt.timestamp(DateTime::TIMESTAMP_FULL));
+            Serial.print("\t");
+            Serial.print(temperatura);
+            Serial.print(" C\t\t");
+            Serial.print(umididade);
+            Serial.print(" %\t\t");
+            Serial.print(luminosidade);
+            Serial.println(" %\t\t");
+        }
     }
-
-  }
-
 }
