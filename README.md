@@ -6,21 +6,21 @@ Contém um projeto que apresenta a construção textual, ténica e de codificaç
 
 Lista de componentes usados:
 
--1 MCU (Atmega 328P) - Arduino Uno R3
--1 LDR + Resistor 10KOhm
--1 DHT-11 (Sensor de temperatura e umidade)
--1 LCD 16x2 - I2C
--1 LDR
--1 Bateria de 9V + suporte para bateria
--1 RTC (Real Time Clock)
--1 Buzzer
--3 LEDs (Cores Vermelha, Verde e Amarela)
--1 Protoboard
--Jumpers
+- 1 MCU (Atmega 328P) - Arduino Uno R3
+- 1 LDR + Resistor 10KOhm
+- 1 DHT-11 (Sensor de temperatura e umidade)
+- 1 LCD 16x2 - I2C
+- 1 LDR
+- 1 Bateria de 9V + suporte para bateria
+- 1 RTC (Real Time Clock)
+- 1 Buzzer
+- 3 LEDs (Cores Vermelha, Verde e Amarela)
+- 1 Protoboard
+- Jumpers
 
 ## ⚡ Diagrama Elétrico:
 
-![Diagrama Elétrico] (C:\Users\PLAY\Desktop\Diagrama Elétrico.JPG)
+![Diagrama Elétrico] ()
 
 ## 📋 Manual de Operação:
 
