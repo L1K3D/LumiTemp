@@ -20,7 +20,7 @@ Lista de componentes usados:
 
 ## ⚡ Diagrama Elétrico:
 
-![Diagrama Elétrico](https://ibb.co/0Mhx06y)
+![Diagrama Elétrico](https://github.com/user-attachments/assets/063c4789-e729-45cd-8191-659d4cc04cc2)
 
 ## 📋 Manual de Operação:
 
