@@ -1,6 +1,6 @@
 # 🚀 Data Logger para Monitoramento Ambiental (FESA)
 
-Contém um projeto que apresenta a construção textual, ténica e de codificação de um Data Logger dedicado ao monitoramento de condições ambientais (temperatura, humidade e luminosidade) em espaços controlados.
+Contém um projeto que apresenta a construção textual, técnica e de codificação de um Data Logger dedicado ao monitoramento de condições ambientais (temperatura, humidade e luminosidade) em espaços controlados.
 
 ## 🛠️ Especificações Técnicas:
 
