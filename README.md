@@ -64,7 +64,7 @@ _**5. MODELOS DE ARMAZENAMENTO E RESET DO SISTEMA**_
 
 O sistema utiliza a memória EEPROM do Arduino para registrar os valores de temperatura, umidade e luminosidade sempre que um dos parâmetros ultrapassa os limites definidos. Esses dados podem ser visualizados no monitor serial para acompanhamento posterior. Se o sistema precisar ser reiniciado, isso pode ser feito pressionando o botão de reset presente na placa Arduino UNO R3.
 
-_**---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---###---**_
+_**---###---###---###---###---###---###---###---###---###---###---###---###---###---###---**_
 
 Este sistema de Data-Logger permite monitorar e registrar o comportamento ambiental em tempo real, fornecendo feedback visual (via LEDs e LCD) e sonoro (via buzzer) com base em parâmetros configuráveis para temperatura, umidade e luminosidade. Ele é útil em aplicações onde o controle do ambiente é essencial, como em estufas, armazéns ou ambientes industriais. O projeto pode ser expandido para incluir mais sensores e funcionalidades, como a comunicação com um servidor remoto ou a adição de armazenamento externo para maior capacidade de dados.
 
