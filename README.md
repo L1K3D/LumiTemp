@@ -6,21 +6,21 @@ Este projeto consiste em um sistema de monitoramento ambiental baseado em um mic
 
 Lista de componentes usados:
 
--> **Microcontrolador:** Atmega 328P - Arduino Uno R3
+-> **Microcontrolador:** Atmega 328P - Arduino Uno R3;
 
--> **Sensor de Luminosidade:** LDR (resistor dependente de luz) + Resistor 10KOhm
+-> **Sensor de Luminosidade:** LDR (resistor dependente de luz) + Resistor 10KOhm;
 
--> **Sensor de Temperatura e Umidade:** DHT-11
+-> **Sensor de Temperatura e Umidade:** DHT-11;
 
--> **Display:** LCD 16x2 - Interface I2C
+-> **Display:** LCD 16x2 - Interface I2C;
 
--> **Bateria:** 9V (com suporte para a bateria)
+-> **Bateria:** 9V (com suporte para a bateria);
 
--> **RTC (Real Time Clock):** DS3231
+-> **RTC (Real Time Clock):** DS3231;
 
 -> **Atuadores:**
        _1 Buzzer_
-       _3 LEDs (Verde, Amarelo, Vermelho)_
+       _3 LEDs (Verde, Amarelo, Vermelho)_;
       
 -> **Protoboard e Jumpers**
 
