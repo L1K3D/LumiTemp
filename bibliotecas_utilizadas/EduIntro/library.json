@@ -1,0 +1,18 @@
+{
+"name": "EduIntro",
+"frameworks": "Arduino",
+"keywords": "Introduction, Education, Workshop",
+"description": "Library for the Arduino Education Introduction Workshop series, includes examples for a broad range of sensors, courseware, and more. Optimized for collaboration.",
+"url": "https://github.com/arduino/Arduino_EduIntro",
+"downloadUrl": "https://github.com/arduino/Arduino_EduIntro/releases",
+"authors":
+{
+        "name": "David Cuartielles",
+        "maintainer": true
+},
+"repository":
+{
+    "type": "git",
+    "url": "https://github.com/arduino/Arduino_EduIntro.git"
+}
+}

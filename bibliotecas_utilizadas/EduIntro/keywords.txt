@@ -1,0 +1,123 @@
+#######################################
+# Syntax Coloring Map For EduLib
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+EduIntro	KEYWORD1	EduIntro
+Led	        KEYWORD1	Led
+Button	    KEYWORD1	Button
+Potentiometer	KEYWORD1	Potentiometer
+Piezo	    KEYWORD1	Piezo
+PIR	        KEYWORD1	PIR
+DHT11	    KEYWORD1	DHT11
+LM35	    KEYWORD1	LM35
+Thermistor	KEYWORD1	Thermistor
+LightSensor	KEYWORD1	LightSensor
+MosFet	    KEYWORD1	MosFet
+Relay	    KEYWORD1	Relay
+ServoMotor	KEYWORD1	ServoMotor
+AnalogInput	KEYWORD1	AnalogInput
+AnalogInput2	KEYWORD1	AnalogInput2
+DigitalInput	KEYWORD1	DigitalInput
+Output	    KEYWORD1	Output
+Motion	    KEYWORD1	Motion
+WiFiComm	KEYWORD1	WiFiComm
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+state	        KEYWORD2
+write	        KEYWORD2
+read	        KEYWORD2
+readRange       KEYWORD2
+on	            KEYWORD2
+off	            KEYWORD2
+blink	        KEYWORD2
+readCelsius	    KEYWORD2
+readFahrenheit	KEYWORD2
+readSwitch	    KEYWORD2
+pressed	        KEYWORD2
+held	        KEYWORD2
+released	    KEYWORD2
+brightness	    KEYWORD2
+fade	        KEYWORD2
+readX	        KEYWORD2
+readY	        KEYWORD2
+readXAxisRate	KEYWORD2
+readYAxisRate	KEYWORD2
+calibrate	    KEYWORD2
+readStep	    KEYWORD2
+inclination	    KEYWORD2
+polarity	    KEYWORD2
+increasing	    KEYWORD2
+decreasing	    KEYWORD2
+getStatus	    KEYWORD2
+getSSID	        KEYWORD2
+getIP	        KEYWORD2
+getClient	    KEYWORD2
+beep	        KEYWORD2
+play	        KEYWORD2
+noBeep	        KEYWORD2
+
+#######################################
+# System Variables (KEYWORD2)
+#######################################
+acc_x	KEYWORD2
+acc_y	KEYWORD2
+acc_z	KEYWORD2
+gyro_x	KEYWORD2
+gyro_y	KEYWORD2
+gyro_z	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+D21	LITERAL1
+D20	LITERAL1
+D19	LITERAL1
+D18	LITERAL1
+D17	LITERAL1
+D16	LITERAL1
+D15	LITERAL1
+D14	LITERAL1
+D13	LITERAL1
+D12	LITERAL1
+D11	LITERAL1
+D10	LITERAL1
+D9	LITERAL1
+D8	LITERAL1
+D7	LITERAL1
+D6	LITERAL1
+D5	LITERAL1
+D4	LITERAL1
+D3	LITERAL1
+D2	LITERAL1
+D1	LITERAL1
+D0	LITERAL1
+
+A16	LITERAL1
+A15	LITERAL1
+A14	LITERAL1
+A13	LITERAL1
+A12	LITERAL1
+A11	LITERAL1
+A10	LITERAL1
+A9	LITERAL1
+A8	LITERAL1
+A7	LITERAL1
+A6	LITERAL1
+A5	LITERAL1
+A4	LITERAL1
+A3	LITERAL1
+A2	LITERAL1
+A1	LITERAL1
+A0	LITERAL1
+
+PULL_DOWN	LITERAL1
+PULL_UP	LITERAL1
+NORMAL	LITERAL1
+INVERTED	LITERAL1
+ANALOG_MAX	LITERAL1
+
