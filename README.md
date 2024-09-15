@@ -70,11 +70,13 @@ Este sistema de Data-Logger permite monitorar e registrar o comportamento ambien
 
 ## 🤝 Integrantes do Projeto:
 
-- Erikson Vieira Queiroz - RA: 082220021
-- Enzo Brito Alves de Oliveira - RA: 082220040
-- Guilherme Alves Barbosa - RA: 082220014
-- Heitor Santos Ferreira - RA: 081230042
-- Tainara do Nascimento Casimiro - RA: 082220011
+- Enzo Brito Alves de Oliveira - RA: 082220040;
+- Erikson Vieira Queiroz - RA: 082220021;
+- Guilherme Alves Barbosa - RA: 082220014;
+- Heitor Santos Ferreira - RA: 081230042;
+- Tainara do Nascimento Casimiro - RA: 082220011;
 - William Santim - RA: 082220033
 
-- Link do Vídeo Demonstrativo: 
+## 🎥 Vídeo Demonstrativo:
+
+- Link: 
