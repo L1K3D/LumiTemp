@@ -79,4 +79,4 @@ Este sistema de Data-Logger permite monitorar e registrar o comportamento ambien
 
 ## 🎥 Vídeo Demonstrativo:
 
-- Link: 
+- Link: https://youtu.be/pG9Qd6uiVvA
