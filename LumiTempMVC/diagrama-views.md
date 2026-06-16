@@ -4,77 +4,77 @@ classDiagram
     %% ARQUIVOS DE CONFIGURAÇÃO GLOBAL DAS VIEWS
     %% ==========================================
     class Globais {
-        +_ViewStart.cshtml (Define o Layout padrão)
-        +_ViewImports.cshtml (Importa Namespaces/TagHelpers)
+        +_ViewStart.cshtml
+        +_ViewImports.cshtml
     }
 
     %% ==========================================
     %% PASTAS E ARQUIVOS .CSHTML (Telas por Módulo)
     %% ==========================================
-    package "Dashboard" {
+    namespace Dashboard {
         class Dashboard_Views {
-            +Index.cshtml (Painel principal)
+            +Index.cshtml
         }
     }
 
-    package "EmpresaParceira" {
+    namespace EmpresaParceira {
         class EmpresaParceira_Views {
-            +Form.cshtml (Cadastro/Edição)
-            +Index.cshtml (Listagem de Empresas)
+            +Form.cshtml
+            +Index.cshtml
         }
     }
 
-    package "FiwareData" {
+    namespace FiwareData {
         class FiwareData_Views {
-            +Index.cshtml (Telemetria do Sensor)
+            +Index.cshtml
         }
     }
 
-    package "Funcionario" {
+    namespace Funcionario {
         class Funcionario_Views {
-            +Index.cshtml (Listagem de Funcionários)
-            +Form.cshtml (Cadastro/Edição)
-            +ConsultaAvancada.cshtml (Filtros de pesquisa)
-            +pvGridFuncionarios.cshtml (Partial View - Tabela assíncrona)
+            +Index.cshtml
+            +Form.cshtml
+            +ConsultaAvancada.cshtml
+            +pvGridFuncionarios.cshtml
         }
     }
 
-    package "Home" {
+    namespace Home {
         class Home_Views {
-            +Index.cshtml (Página de boas-vindas)
-            +Privacy.cshtml (Termos de privacidade)
+            +Index.cshtml
+            +Privacy.cshtml
         }
     }
 
-    package "Login" {
+    namespace Login {
         class Login_Views {
-            +Index.cshtml (Tela de autenticação)
+            +Index.cshtml
         }
     }
 
-    package "Sensor" {
+    namespace Sensor {
         class Sensor_Views {
-            +Index.cshtml (Listagem de Sensores)
-            +Form.cshtml (Cadastro/Edição)
-            +ConsultaAvancada.cshtml (Filtros de pesquisa)
-            +pvGridSensores.cshtml (Partial View - Tabela assíncrona)
+            +Index.cshtml
+            +Form.cshtml
+            +ConsultaAvancada.cshtml
+            +pvGridSensores.cshtml
         }
     }
 
-    package "Sobre" {
+    namespace Sobre {
         class Sobre_Views {
-            +Index.cshtml (Informações do sistema)
+            +Index.cshtml
         }
     }
 
     %% ==========================================
     %% PASTA SHARED (Componentes Compartilhados)
     %% ==========================================
-    package "Shared (Compartilhado)" {
+    namespace Shared {
         class Shared_Views {
-            +_Layout.cshtml (Template estrutural: Topo/Menu/Rodapé)
-            +_ValidationScriptsPartial.cshtml (Scripts de validação front-end)
-            +Error.cshtml (Tela global de exceções)
+            +_Layout.cshtml
+            +_ValidationScriptsPartial.cshtml
+            +Error.cshtml
         }
     }
 
@@ -82,17 +82,15 @@ classDiagram
     %% RELACIONAMENTOS E DEPENDÊNCIAS DAS VIEWS
     %% ==========================================
     
-    %% O Layout envelopa as páginas principais
-    Shared_Views --> Dashboard_Views : Estrutura base via _Layout
-    Shared_Views --> EmpresaParceira_Views : Estrutura base via _Layout
-    Shared_Views --> FiwareData_Views : Estrutura base via _Layout
-    Shared_Views --> Funcionario_Views : Estrutura base via _Layout
-    Shared_Views --> Home_Views : Estrutura base via _Layout
-    Shared_Views --> Sensor_Views : Estrutura base via _Layout
-    Shared_Views --> Sobre_Views : Estrutura base via _Layout
+    Shared_Views --> Dashboard_Views : Estrutura base via Layout
+    Shared_Views --> EmpresaParceira_Views : Estrutura base via Layout
+    Shared_Views --> FiwareData_Views : Estrutura base via Layout
+    Shared_Views --> Funcionario_Views : Estrutura base via Layout
+    Shared_Views --> Home_Views : Estrutura base via Layout
+    Shared_Views --> Sensor_Views : Estrutura base via Layout
+    Shared_Views --> Sobre_Views : Estrutura base via Layout
 
-    %% Scripts de validação são injetados nos formulários
-    Shared_Views ..> EmpresaParceira_Views : Fornece _ValidationScripts para o Form
-    Shared_Views ..> Funcionario_Views : Fornece _ValidationScripts para o Form
-    Shared_Views ..> Sensor_Views : Fornece _ValidationScripts para o Form
+    Shared_Views ..> EmpresaParceira_Views : Validação front-end
+    Shared_Views ..> Funcionario_Views : Validação front-end
+    Shared_Views ..> Sensor_Views : Validation front-end
 ```
